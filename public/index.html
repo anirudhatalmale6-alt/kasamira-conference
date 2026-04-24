@@ -212,6 +212,24 @@
 
                 <div class="conf-sidebar-content hidden" data-content="settings" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;">
                     <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.85rem;">Camera</label>
+                        <select id="conf-camera-select" onchange="changeConfCamera()">
+                            <option value="">Loading devices...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.85rem;">Microphone</label>
+                        <select id="conf-mic-select" onchange="changeConfMic()">
+                            <option value="">Loading devices...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.85rem;">Speaker</label>
+                        <select id="conf-speaker-select" onchange="changeConfSpeaker()">
+                            <option value="">Loading devices...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
                         <label style="font-size:0.85rem;">Video Quality</label>
                         <select id="conf-quality-live" onchange="changeConfQuality()">
                             <option value="half-hd">Half HD (640x360)</option>

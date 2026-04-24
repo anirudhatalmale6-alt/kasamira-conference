@@ -12,6 +12,9 @@ let confIsHost = false;
 let confParticipants = {};
 let confQuality = 'full-hd';
 const confQualityMap = { 'half-hd': { w: 640, h: 360 }, 'full-hd': { w: 1920, h: 1080 }, '4k': { w: 3840, h: 2160 } };
+let selectedCameraId = '';
+let selectedMicId = '';
+let selectedSpeakerId = '';
 
 function escapeHtml(text) {
   return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -352,21 +355,31 @@ async function enterConference(roomCode, roomName) {
 
   const q = confQualityMap[confQuality] || confQualityMap['full-hd'];
   try {
-    confStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: q.w }, height: { ideal: q.h } },
-      audio: { echoCancellation: true, noiseSuppression: true }
-    });
+    const videoConstraints = { width: { ideal: q.w }, height: { ideal: q.h } };
+    if (selectedCameraId) videoConstraints.deviceId = { exact: selectedCameraId };
+    const audioConstraints = { echoCancellation: true, noiseSuppression: true };
+    if (selectedMicId) audioConstraints.deviceId = { exact: selectedMicId };
+    confStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: audioConstraints });
+    const vt = confStream.getVideoTracks()[0];
+    const at = confStream.getAudioTracks()[0];
+    if (vt) selectedCameraId = vt.getSettings().deviceId || '';
+    if (at) selectedMicId = at.getSettings().deviceId || '';
     document.getElementById('conf-btn-mic').style.color = '#10b981';
     document.getElementById('conf-btn-cam').style.color = '#10b981';
   } catch {
     try {
-      confStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioConstraints = { echoCancellation: true, noiseSuppression: true };
+      if (selectedMicId) audioConstraints.deviceId = { exact: selectedMicId };
+      confStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      const at = confStream.getAudioTracks()[0];
+      if (at) selectedMicId = at.getSettings().deviceId || '';
       document.getElementById('conf-btn-cam').style.color = 'var(--text-muted)';
     } catch {
       showToast('Cannot access camera or microphone', 'error');
       confStream = null;
     }
   }
+  enumerateDevices();
 
   addVideoTile('local', confUserName + ' (You)', confStream);
   confParticipants['local'] = { name: confUserName, isOnStage: true };
@@ -514,6 +527,9 @@ function addVideoTile(id, name, stream) {
   }
   const video = tile.querySelector('video');
   if (stream) video.srcObject = stream;
+  if (id !== 'local' && selectedSpeakerId && video.setSinkId) {
+    video.setSinkId(selectedSpeakerId).catch(() => {});
+  }
 }
 
 // ===== CONTROLS =====
@@ -577,10 +593,11 @@ async function changeConfQuality() {
   const q = confQualityMap[val];
   if (!confStream) return;
   try {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: q.w }, height: { ideal: q.h } },
-      audio: { echoCancellation: true, noiseSuppression: true }
-    });
+    const videoConstraints = { width: { ideal: q.w }, height: { ideal: q.h } };
+    if (selectedCameraId) videoConstraints.deviceId = { exact: selectedCameraId };
+    const audioConstraints = { echoCancellation: true, noiseSuppression: true };
+    if (selectedMicId) audioConstraints.deviceId = { exact: selectedMicId };
+    const newStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: audioConstraints });
     confStream.getTracks().forEach(t => t.stop());
     confStream = newStream;
     const lv = document.querySelector('#conf-tile-local video');
@@ -596,6 +613,110 @@ async function changeConfQuality() {
     });
     showToast('Quality changed to ' + val.replace('-', ' ').toUpperCase(), 'success');
   } catch { showToast('Failed to change quality', 'error'); }
+}
+
+async function enumerateDevices() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const camSel = document.getElementById('conf-camera-select');
+    const micSel = document.getElementById('conf-mic-select');
+    const spkSel = document.getElementById('conf-speaker-select');
+    if (camSel) {
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      camSel.innerHTML = cams.length === 0
+        ? '<option value="">No camera found</option>'
+        : cams.map((d, i) => `<option value="${d.deviceId}" ${d.deviceId === selectedCameraId ? 'selected' : ''}>${d.label || 'Camera ' + (i + 1)}</option>`).join('');
+    }
+    if (micSel) {
+      const mics = devices.filter(d => d.kind === 'audioinput');
+      micSel.innerHTML = mics.length === 0
+        ? '<option value="">No microphone found</option>'
+        : mics.map((d, i) => `<option value="${d.deviceId}" ${d.deviceId === selectedMicId ? 'selected' : ''}>${d.label || 'Microphone ' + (i + 1)}</option>`).join('');
+    }
+    if (spkSel) {
+      const spks = devices.filter(d => d.kind === 'audiooutput');
+      if (spks.length === 0) {
+        spkSel.innerHTML = '<option value="">Default</option>';
+      } else {
+        spkSel.innerHTML = spks.map((d, i) => `<option value="${d.deviceId}" ${d.deviceId === selectedSpeakerId ? 'selected' : ''}>${d.label || 'Speaker ' + (i + 1)}</option>`).join('');
+      }
+    }
+  } catch (err) { console.error('enumerateDevices error:', err); }
+}
+
+async function changeConfCamera() {
+  const sel = document.getElementById('conf-camera-select');
+  if (!sel) return;
+  selectedCameraId = sel.value;
+  if (!confStream) return;
+  const q = confQualityMap[confQuality] || confQualityMap['full-hd'];
+  try {
+    const constraints = {
+      video: { deviceId: { exact: selectedCameraId }, width: { ideal: q.w }, height: { ideal: q.h } },
+      audio: selectedMicId ? { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true } : { echoCancellation: true, noiseSuppression: true }
+    };
+    const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+    confStream.getTracks().forEach(t => t.stop());
+    confStream = newStream;
+    const lv = document.querySelector('#conf-tile-local video');
+    if (lv) lv.srcObject = confStream;
+    const vt = confStream.getVideoTracks()[0];
+    const at = confStream.getAudioTracks()[0];
+    if (vt) selectedCameraId = vt.getSettings().deviceId || selectedCameraId;
+    if (at) selectedMicId = at.getSettings().deviceId || selectedMicId;
+    Object.values(confPeers).forEach(({ peer }) => {
+      const senders = peer._pc?.getSenders() || [];
+      senders.forEach(s => {
+        if (s.track?.kind === 'video' && vt) s.replaceTrack(vt);
+        if (s.track?.kind === 'audio' && at) s.replaceTrack(at);
+      });
+    });
+    document.getElementById('conf-btn-cam').style.color = '#10b981';
+    showToast('Camera changed', 'success');
+  } catch (err) {
+    console.error('changeConfCamera error:', err);
+    showToast('Failed to switch camera', 'error');
+  }
+}
+
+async function changeConfMic() {
+  const sel = document.getElementById('conf-mic-select');
+  if (!sel) return;
+  selectedMicId = sel.value;
+  if (!confStream) return;
+  try {
+    const audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true }
+    });
+    const oldAudio = confStream.getAudioTracks();
+    oldAudio.forEach(t => { confStream.removeTrack(t); t.stop(); });
+    const newAudioTrack = audioStream.getAudioTracks()[0];
+    confStream.addTrack(newAudioTrack);
+    selectedMicId = newAudioTrack.getSettings().deviceId || selectedMicId;
+    Object.values(confPeers).forEach(({ peer }) => {
+      const senders = peer._pc?.getSenders() || [];
+      senders.forEach(s => {
+        if (s.track?.kind === 'audio') s.replaceTrack(newAudioTrack);
+      });
+    });
+    document.getElementById('conf-btn-mic').style.color = '#10b981';
+    showToast('Microphone changed', 'success');
+  } catch (err) {
+    console.error('changeConfMic error:', err);
+    showToast('Failed to switch microphone', 'error');
+  }
+}
+
+function changeConfSpeaker() {
+  const sel = document.getElementById('conf-speaker-select');
+  if (!sel) return;
+  selectedSpeakerId = sel.value;
+  document.querySelectorAll('#conf-video-grid video').forEach(video => {
+    if (video.setSinkId && selectedSpeakerId) {
+      video.setSinkId(selectedSpeakerId).catch(err => console.error('setSinkId error:', err));
+    }
+  });
+  showToast('Speaker changed', 'success');
 }
 
 function updateConfName() {
