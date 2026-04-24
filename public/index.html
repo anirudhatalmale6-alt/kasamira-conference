@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasamira Conference</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ===== AUTH PAGE ===== -->
+    <div id="auth-page" class="auth-container">
+        <div class="auth-card">
+            <h2><i class="fas fa-video" style="color:#10b981;"></i> Kasamira Conference</h2>
+            <p>Professional Video Conferencing</p>
+            <div id="auth-login-form">
+                <div class="form-group">
+                    <input type="email" id="login-email" placeholder="Email">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="login-password" placeholder="Password">
+                </div>
+                <button class="btn btn-primary" onclick="doLogin()" style="width:100%;padding:12px;font-size:1rem;">Sign In</button>
+                <p style="margin-top:16px;font-size:0.85rem;">No account? <a href="#" onclick="showRegister()">Register</a></p>
+            </div>
+            <div id="auth-register-form" class="hidden">
+                <div class="form-group">
+                    <input type="text" id="reg-name" placeholder="Full Name">
+                </div>
+                <div class="form-group">
+                    <input type="email" id="reg-email" placeholder="Email">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="reg-password" placeholder="Password">
+                </div>
+                <button class="btn btn-primary" onclick="doRegister()" style="width:100%;padding:12px;font-size:1rem;">Create Account</button>
+                <p style="margin-top:16px;font-size:0.85rem;">Already have an account? <a href="#" onclick="showLogin()">Sign In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="dashboard-page" class="hidden">
+        <div class="dashboard">
+            <div class="dashboard-header">
+                <h1><i class="fas fa-video" style="color:#10b981;"></i> Conferences</h1>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span id="user-name" style="color:var(--text-muted);font-size:0.85rem;"></span>
+                    <button class="btn btn-primary" onclick="showCreateModal()"><i class="fas fa-plus"></i> New Conference</button>
+                    <button class="btn" onclick="showJoinModal()"><i class="fas fa-sign-in-alt"></i> Join</button>
+                    <button class="btn" onclick="doLogout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <h3 style="font-size:1rem;margin-bottom:12px;color:var(--text-muted);"><i class="fas fa-play-circle" style="color:#10b981;"></i> Active & Scheduled</h3>
+                <div id="active-conferences" class="conf-grid"></div>
+            </div>
+
+            <div>
+                <h3 style="font-size:1rem;margin-bottom:12px;color:var(--text-muted);"><i class="fas fa-history"></i> History</h3>
+                <div id="ended-conferences" class="conf-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CREATE CONFERENCE MODAL ===== -->
+    <div class="modal-overlay" id="create-modal">
+        <div class="modal">
+            <h3><i class="fas fa-video" style="color:#10b981;"></i> Create Conference</h3>
+            <div class="form-group">
+                <label>Room Name</label>
+                <input type="text" id="conf-room-name" placeholder="Team Meeting">
+            </div>
+            <div class="form-group">
+                <label>Max Participants</label>
+                <select id="conf-max-participants">
+                    <option value="4">4</option>
+                    <option value="8" selected>8</option>
+                    <option value="16">16</option>
+                    <option value="32">32</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Video Quality</label>
+                <select id="conf-quality">
+                    <option value="half-hd">Half HD (640x360)</option>
+                    <option value="full-hd" selected>Full HD (1920x1080)</option>
+                    <option value="4k">4K (3840x2160)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Room Password <span style="color:var(--text-muted);font-size:0.8rem;">(optional)</span></label>
+                <input type="password" id="conf-password" placeholder="Leave empty for open room">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+                <button class="btn" onclick="hideCreateModal()">Cancel</button>
+                <button class="btn" onclick="createConference(true)"><i class="fas fa-calendar"></i> Schedule</button>
+                <button class="btn btn-primary" onclick="createConference(false)"><i class="fas fa-video"></i> Start Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== JOIN MODAL ===== -->
+    <div class="modal-overlay" id="join-modal">
+        <div class="modal">
+            <h3><i class="fas fa-sign-in-alt" style="color:var(--accent);"></i> Join Conference</h3>
+            <div class="form-group">
+                <label>Room Code</label>
+                <input type="text" id="join-room-code" placeholder="Enter room code">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+                <button class="btn" onclick="hideJoinModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="joinByCode()"><i class="fas fa-video"></i> Join</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GUEST JOIN PAGE (replaces auth when accessed via link) ===== -->
+    <div id="guest-join-page" class="hidden auth-container">
+        <div class="auth-card">
+            <div style="font-size:3rem;margin-bottom:12px;">📹</div>
+            <h2 id="guest-room-name">Conference</h2>
+            <p>Enter your name to join</p>
+            <div class="form-group">
+                <input type="text" id="guest-join-name" placeholder="Your name" autocomplete="off">
+            </div>
+            <div id="guest-pw-group" class="hidden form-group">
+                <input type="password" id="guest-join-password" placeholder="Room password">
+            </div>
+            <button class="btn btn-primary" onclick="joinAsGuest()" style="width:100%;padding:12px;font-size:1rem;"><i class="fas fa-video"></i> Join Conference</button>
+        </div>
+    </div>
+
+    <!-- ===== CONFERENCE PAGE ===== -->
+    <div id="conference-page" class="hidden" style="position:fixed;inset:0;z-index:2000;background:var(--bg-primary);display:flex;flex-direction:column;">
+        <div id="conf-topbar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);flex-wrap:wrap;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                <i class="fas fa-video" style="color:#10b981;font-size:1rem;"></i>
+                <span id="conf-title" style="font-weight:600;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">Conference</span>
+                <span id="conf-participant-count" style="color:var(--text-muted);font-size:0.75rem;white-space:nowrap;"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                <button class="btn btn-sm conf-toolbar-btn" onclick="copyConfLink()" title="Copy invite link"><i class="fas fa-link"></i> <span class="conf-btn-label">Invite</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" id="conf-btn-mic" onclick="toggleConfMic()" style="color:#10b981;" title="Microphone"><i class="fas fa-microphone"></i> <span class="conf-btn-label">Mic</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" id="conf-btn-cam" onclick="toggleConfCam()" style="color:#10b981;" title="Camera"><i class="fas fa-video"></i> <span class="conf-btn-label">Cam</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" id="conf-btn-screen" onclick="toggleConfScreen()" title="Screen Share"><i class="fas fa-desktop"></i> <span class="conf-btn-label">Screen</span></button>
+                <button class="btn btn-sm conf-toolbar-btn host-conf-only" id="conf-btn-lower-third" onclick="toggleConfLowerThird()" title="Lower Third"><i class="fas fa-closed-captioning"></i> <span class="conf-btn-label">Banner</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" onclick="toggleConfSidebar('participants')" title="Participants"><i class="fas fa-users"></i> <span class="conf-btn-label">People</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" onclick="toggleConfSidebar('chat')" title="Chat"><i class="fas fa-comment"></i> <span class="conf-btn-label">Chat</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" onclick="toggleConfSidebar('settings')" title="Settings"><i class="fas fa-cog"></i></button>
+                <button class="btn btn-sm conf-toolbar-btn host-conf-only" onclick="confAiSummarize()" title="AI Summary" style="color:#7c3aed;"><i class="fas fa-robot"></i> <span class="conf-btn-label">AI</span></button>
+                <button class="btn btn-sm conf-toolbar-btn" style="background:var(--accent-red);color:#fff;" onclick="leaveConference()" title="Leave"><i class="fas fa-phone-slash"></i> <span class="conf-btn-label">Leave</span></button>
+            </div>
+        </div>
+
+        <div style="flex:1;display:flex;overflow:hidden;position:relative;">
+            <div id="conf-video-grid" style="flex:1;display:grid;gap:8px;padding:8px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-content:start;overflow-y:auto;"></div>
+
+            <div id="conf-lobby-screen" class="hidden" style="position:absolute;inset:0;background:var(--bg-primary);display:flex;align-items:center;justify-content:center;z-index:15;flex-direction:column;gap:20px;">
+                <div style="font-size:3rem;animation:pulse 1.5s infinite;">⏳</div>
+                <h2 style="margin:0;font-size:1.3rem;">Waiting in Lobby</h2>
+                <p style="color:var(--text-muted);margin:0;text-align:center;padding:0 20px;" id="conf-lobby-msg">The host will let you in shortly...</p>
+                <button class="btn" onclick="leaveConference()">← Leave</button>
+            </div>
+
+            <div id="conf-lobby-notifications" style="position:absolute;top:10px;right:10px;z-index:15;display:flex;flex-direction:column;gap:8px;max-width:300px;width:calc(100% - 20px);"></div>
+
+            <div id="conf-lower-third-bar" class="hidden" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);padding:8px 16px;border-radius:10px;display:flex;align-items:center;gap:8px;z-index:10;border:1px solid rgba(0,212,255,0.3);flex-wrap:wrap;max-width:calc(100% - 40px);">
+                <input type="text" id="conf-lt-name" placeholder="Name" style="width:120px;font-size:0.8rem;">
+                <input type="text" id="conf-lt-title" placeholder="Title / Role" style="width:160px;font-size:0.8rem;">
+                <button class="btn btn-sm btn-primary" onclick="applyConfLowerThird()">Apply</button>
+                <button class="btn btn-sm" onclick="clearConfLowerThird()">Clear</button>
+            </div>
+
+            <div id="conf-sidebar" class="hidden" style="width:320px;max-width:100%;border-left:1px solid var(--border-color);display:flex;flex-direction:column;background:var(--bg-secondary);position:relative;">
+                <div style="display:flex;border-bottom:1px solid var(--border-color);">
+                    <button class="conf-sidebar-tab active" data-tab="lobby" onclick="switchConfSidebarTab('lobby')" style="flex:1;padding:10px;border:none;background:none;color:var(--text-primary);cursor:pointer;font-size:0.8rem;font-weight:600;border-bottom:2px solid transparent;"><i class="fas fa-door-open"></i> Lobby</button>
+                    <button class="conf-sidebar-tab" data-tab="chat" onclick="switchConfSidebarTab('chat')" style="flex:1;padding:10px;border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;border-bottom:2px solid transparent;"><i class="fas fa-comment"></i> Chat</button>
+                    <button class="conf-sidebar-tab" data-tab="participants" onclick="switchConfSidebarTab('participants')" style="flex:1;padding:10px;border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;border-bottom:2px solid transparent;"><i class="fas fa-users"></i> People</button>
+                    <button class="conf-sidebar-tab" data-tab="settings" onclick="switchConfSidebarTab('settings')" style="flex:1;padding:10px;border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;border-bottom:2px solid transparent;"><i class="fas fa-cog"></i></button>
+                </div>
+
+                <div class="conf-sidebar-content" data-content="lobby" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;">
+                    <div style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:20px 0;">
+                        <i class="fas fa-door-open" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>
+                        No guests waiting
+                    </div>
+                    <div id="conf-sidebar-lobby-list"></div>
+                </div>
+
+                <div class="conf-sidebar-content hidden" data-content="chat" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                    <div style="padding:8px 12px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:0.8rem;color:var(--text-muted);">To:</span>
+                        <select id="conf-chat-mode" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font-size:0.8rem;">
+                            <option value="all">Everyone</option>
+                        </select>
+                    </div>
+                    <div id="conf-chat-messages" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;"></div>
+                    <div style="padding:8px 12px;border-top:1px solid var(--border-color);display:flex;gap:6px;">
+                        <input type="text" id="conf-chat-input" placeholder="Type a message..." style="flex:1;font-size:0.85rem;" onkeydown="if(event.key==='Enter')sendConfChat()">
+                        <button class="btn btn-sm btn-primary" onclick="sendConfChat()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+
+                <div class="conf-sidebar-content hidden" data-content="participants" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px;">
+                    <div id="conf-participants-list"></div>
+                    <div id="conf-p-count" style="color:var(--text-muted);font-size:0.75rem;text-align:center;padding:8px;"></div>
+                </div>
+
+                <div class="conf-sidebar-content hidden" data-content="settings" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.85rem;">Video Quality</label>
+                        <select id="conf-quality-live" onchange="changeConfQuality()">
+                            <option value="half-hd">Half HD (640x360)</option>
+                            <option value="full-hd">Full HD (1920x1080)</option>
+                            <option value="4k">4K (3840x2160)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.85rem;">Your Display Name</label>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="conf-display-name" style="flex:1;">
+                            <button class="btn btn-sm btn-primary" onclick="updateConfName()">Save</button>
+                        </div>
+                    </div>
+                    <div style="border-top:1px solid var(--border-color);padding-top:16px;">
+                        <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:8px;">AI Features</label>
+                        <button class="btn btn-sm" onclick="confAiSummarize()" style="width:100%;margin-bottom:8px;"><i class="fas fa-robot" style="color:#7c3aed;"></i> Summarize Meeting</button>
+                        <button class="btn btn-sm" onclick="confAiActionItems()" style="width:100%;"><i class="fas fa-list-check" style="color:#10b981;"></i> Extract Action Items</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="conf-ai-modal" class="hidden" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:16px;width:90%;max-width:560px;max-height:80vh;z-index:20;box-shadow:0 8px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;">
+                <div style="padding:16px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:8px;"><i class="fas fa-robot" style="color:#7c3aed;"></i><span style="font-weight:600;" id="conf-ai-title">AI Summary</span></div>
+                    <button onclick="document.getElementById('conf-ai-modal').classList.add('hidden')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="conf-ai-content" style="flex:1;overflow-y:auto;padding:20px;font-size:0.9rem;line-height:1.7;white-space:pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== HISTORY MODAL ===== -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal" style="max-width:600px;max-height:80vh;display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;" id="history-modal-title">Details</h3>
+                <button class="btn btn-sm" onclick="document.getElementById('history-modal').classList.remove('active')"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="history-modal-content" style="flex:1;overflow-y:auto;padding:12px;background:var(--bg-primary);border-radius:8px;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
