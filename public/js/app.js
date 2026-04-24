@@ -356,9 +356,9 @@ async function enterConference(roomCode, roomName) {
   const q = confQualityMap[confQuality] || confQualityMap['full-hd'];
   try {
     const videoConstraints = { width: { ideal: q.w }, height: { ideal: q.h } };
-    if (selectedCameraId) videoConstraints.deviceId = { exact: selectedCameraId };
+    if (selectedCameraId) videoConstraints.deviceId = selectedCameraId;
     const audioConstraints = { echoCancellation: true, noiseSuppression: true };
-    if (selectedMicId) audioConstraints.deviceId = { exact: selectedMicId };
+    if (selectedMicId) audioConstraints.deviceId = selectedMicId;
     confStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: audioConstraints });
     const vt = confStream.getVideoTracks()[0];
     const at = confStream.getAudioTracks()[0];
@@ -369,7 +369,7 @@ async function enterConference(roomCode, roomName) {
   } catch {
     try {
       const audioConstraints = { echoCancellation: true, noiseSuppression: true };
-      if (selectedMicId) audioConstraints.deviceId = { exact: selectedMicId };
+      if (selectedMicId) audioConstraints.deviceId = selectedMicId;
       confStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       const at = confStream.getAudioTracks()[0];
       if (at) selectedMicId = at.getSettings().deviceId || '';
@@ -594,9 +594,9 @@ async function changeConfQuality() {
   if (!confStream) return;
   try {
     const videoConstraints = { width: { ideal: q.w }, height: { ideal: q.h } };
-    if (selectedCameraId) videoConstraints.deviceId = { exact: selectedCameraId };
+    if (selectedCameraId) videoConstraints.deviceId = selectedCameraId;
     const audioConstraints = { echoCancellation: true, noiseSuppression: true };
-    if (selectedMicId) audioConstraints.deviceId = { exact: selectedMicId };
+    if (selectedMicId) audioConstraints.deviceId = selectedMicId;
     const newStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: audioConstraints });
     confStream.getTracks().forEach(t => t.stop());
     confStream = newStream;
@@ -651,16 +651,26 @@ async function changeConfCamera() {
   if (!confStream) return;
   const q = confQualityMap[confQuality] || confQualityMap['full-hd'];
   try {
-    const videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: selectedCameraId }, width: { ideal: q.w }, height: { ideal: q.h } },
-      audio: false
-    });
     const oldVideo = confStream.getVideoTracks();
     oldVideo.forEach(t => { confStream.removeTrack(t); t.stop(); });
+    const lv = document.querySelector('#conf-tile-local video');
+    if (lv) lv.srcObject = null;
+    await new Promise(r => setTimeout(r, 300));
+    let videoStream;
+    try {
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: selectedCameraId }, width: { ideal: q.w }, height: { ideal: q.h } },
+        audio: false
+      });
+    } catch {
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: selectedCameraId, width: { ideal: q.w }, height: { ideal: q.h } },
+        audio: false
+      });
+    }
     const newVideoTrack = videoStream.getVideoTracks()[0];
     confStream.addTrack(newVideoTrack);
     selectedCameraId = newVideoTrack.getSettings().deviceId || selectedCameraId;
-    const lv = document.querySelector('#conf-tile-local video');
     if (lv) lv.srcObject = confStream;
     Object.values(confPeers).forEach(({ peer }) => {
       const senders = peer._pc?.getSenders() || [];
@@ -682,11 +692,12 @@ async function changeConfMic() {
   selectedMicId = sel.value;
   if (!confStream) return;
   try {
-    const audioStream = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true }
-    });
     const oldAudio = confStream.getAudioTracks();
     oldAudio.forEach(t => { confStream.removeTrack(t); t.stop(); });
+    await new Promise(r => setTimeout(r, 200));
+    const audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: selectedMicId, echoCancellation: true, noiseSuppression: true }
+    });
     const newAudioTrack = audioStream.getAudioTracks()[0];
     confStream.addTrack(newAudioTrack);
     selectedMicId = newAudioTrack.getSettings().deviceId || selectedMicId;
