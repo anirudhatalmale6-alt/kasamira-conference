@@ -651,31 +651,28 @@ async function changeConfCamera() {
   if (!confStream) return;
   const q = confQualityMap[confQuality] || confQualityMap['full-hd'];
   try {
-    const constraints = {
+    const videoStream = await navigator.mediaDevices.getUserMedia({
       video: { deviceId: { exact: selectedCameraId }, width: { ideal: q.w }, height: { ideal: q.h } },
-      audio: selectedMicId ? { deviceId: { exact: selectedMicId }, echoCancellation: true, noiseSuppression: true } : { echoCancellation: true, noiseSuppression: true }
-    };
-    const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-    confStream.getTracks().forEach(t => t.stop());
-    confStream = newStream;
+      audio: false
+    });
+    const oldVideo = confStream.getVideoTracks();
+    oldVideo.forEach(t => { confStream.removeTrack(t); t.stop(); });
+    const newVideoTrack = videoStream.getVideoTracks()[0];
+    confStream.addTrack(newVideoTrack);
+    selectedCameraId = newVideoTrack.getSettings().deviceId || selectedCameraId;
     const lv = document.querySelector('#conf-tile-local video');
     if (lv) lv.srcObject = confStream;
-    const vt = confStream.getVideoTracks()[0];
-    const at = confStream.getAudioTracks()[0];
-    if (vt) selectedCameraId = vt.getSettings().deviceId || selectedCameraId;
-    if (at) selectedMicId = at.getSettings().deviceId || selectedMicId;
     Object.values(confPeers).forEach(({ peer }) => {
       const senders = peer._pc?.getSenders() || [];
       senders.forEach(s => {
-        if (s.track?.kind === 'video' && vt) s.replaceTrack(vt);
-        if (s.track?.kind === 'audio' && at) s.replaceTrack(at);
+        if (s.track?.kind === 'video') s.replaceTrack(newVideoTrack);
       });
     });
     document.getElementById('conf-btn-cam').style.color = '#10b981';
     showToast('Camera changed', 'success');
   } catch (err) {
     console.error('changeConfCamera error:', err);
-    showToast('Failed to switch camera', 'error');
+    showToast('Failed to switch camera: ' + (err.message || err), 'error');
   }
 }
 
